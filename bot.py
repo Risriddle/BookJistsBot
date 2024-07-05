@@ -1,12 +1,13 @@
 import os
 import fitz  # PyMuPDF
 import telebot
-from flask import Flask, request, abort
+from flask import Flask, request
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+RENDER_APP_URL = os.getenv("RENDER_APP_URL")  # Add this line to fetch the Render app URL from environment variables
 bot = telebot.TeleBot(BOT_TOKEN)
 
 pdf_directory = "/home/risriddle/Downloads/Books"
@@ -111,6 +112,13 @@ def webhook():
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
     return "ok", 200
+
+# Set webhook URL
+@app.before_first_request
+def set_webhook():
+    webhook_url = f"{RENDER_APP_URL}/{BOT_TOKEN}"
+    bot.remove_webhook()
+    bot.set_webhook(url=webhook_url)
 
 # Run Flask app
 if __name__ == '__main__':
