@@ -102,6 +102,9 @@ def start(message):
 
     bot.reply_to(message, f"Highlight extraction completed for {pdf_filename}. Check the output directory for the result.")
 
+# Flask app initialization
+app = Flask(__name__)
+
 # Endpoint to receive webhook updates from Telegram
 @app.route(f'/{BOT_TOKEN}', methods=['POST'])
 def webhook():
