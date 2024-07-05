@@ -1,12 +1,12 @@
 import os
 import fitz  # PyMuPDF
 import telebot
-from flask import Flask
+from flask import Flask, request, abort
 from dotenv import load_dotenv
 
-load_dotenv() 
- 
-BOT_TOKEN=os.getenv("BOT_TOKEN")
+load_dotenv()
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 pdf_directory = "/home/risriddle/Downloads/Books"
@@ -25,12 +25,12 @@ def extract_highlighted_text(pdf_path):
                 rect = annot.rect  # Annotation rectangle
                 highlights = page.get_text("text", clip=rect)  # Get text within the annotation's rectangle
                 highlighted_text.append(highlights.strip())
-    
+
     return highlighted_text
 
 def generate_highlight_cards(pdf_path, output_directory):
     os.makedirs(output_directory, exist_ok=True)
-    
+
     filename = os.path.basename(pdf_path)
     pdf_name = os.path.splitext(filename)[0]
     output_file = os.path.join(output_directory, f"{pdf_name}_highlights.html")
@@ -48,7 +48,7 @@ def generate_highlight_cards(pdf_path, output_directory):
                 .share-buttons { display: flex; justify-content: flex-end; margin-top: 10px; }
                 .share-button { text-decoration: none; padding: 10px 15px; margin-left: 10px; border-radius: 5px; font-size: 14px; }
                 .share-whatsapp { background-color: #25D366; color: white; }
-                 </style>
+            </style>
         </head>
         <body>
             <div class="container">
@@ -68,7 +68,6 @@ def generate_highlight_cards(pdf_path, output_directory):
                 <p>{highlight}</p>
                 <div class="share-buttons">
                     <a href="https://api.whatsapp.com/send?text={encoded_highlight}" target="_blank" class="share-button share-whatsapp">Share on WhatsApp</a>
-                    
                 </div>
             </div>
             """)
@@ -81,6 +80,7 @@ def generate_highlight_cards(pdf_path, output_directory):
 
     return output_file
 
+# Command handler to start processing
 @bot.message_handler(commands=['start'])
 def start(message):
     command = message.text.split()
@@ -102,26 +102,13 @@ def start(message):
 
     bot.reply_to(message, f"Highlight extraction completed for {pdf_filename}. Check the output directory for the result.")
 
-# def main():
-#     bot.polling()
+# Endpoint to receive webhook updates from Telegram
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+def webhook():
+    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+    bot.process_new_updates([update])
+    return "ok", 200
 
-# if __name__ == '__main__':
-#     main()
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is running!"
-
-def main():
-    # Start polling in a separate thread
-    from threading import Thread
-    Thread(target=bot.polling).start()
-
-    # Run Flask app
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
-
+# Run Flask app
 if __name__ == '__main__':
-    main()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
