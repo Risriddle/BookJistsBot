@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv() 
  
-# BOT_TOKEN = '6811169224:AAEknM9A2_EusaTaRMetwszkabB4fmxuZjQ'
+
 BOT_TOKEN=os.getenv("BOT_TOKEN")
 bot = telebot.TeleBot(BOT_TOKEN)
 
