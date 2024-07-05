@@ -114,11 +114,9 @@ def webhook():
     return "ok", 200
 
 # Set webhook URL
-@app.before_first_request
-def set_webhook():
-    webhook_url = f"{RENDER_APP_URL}/{BOT_TOKEN}"
-    bot.remove_webhook()
-    bot.set_webhook(url=webhook_url)
+webhook_url = f"{RENDER_APP_URL}/{BOT_TOKEN}"
+bot.remove_webhook()
+bot.set_webhook(url=webhook_url)
 
 # Run Flask app
 if __name__ == '__main__':
