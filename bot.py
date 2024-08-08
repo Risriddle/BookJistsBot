@@ -1,23 +1,18 @@
-
 import os
 import fitz  # PyMuPDF
 from pyrogram import Client, filters
 from dotenv import load_dotenv
-
+from tempfile import TemporaryDirectory
 
 load_dotenv() 
-
 
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
 
-bot = Client("pdf_highlighter_bot", api_id=api_id, api_hash=api_hash, bot_token=BOT_TOKEN)
 
-# Directories for PDF files and output files
-pdf_directory = "/home/risriddle/Downloads/Books"
-output_directory = "/home/risriddle/Downloads/Jists"
+bot = Client("pdf_highlighter_bot", api_id=api_id, api_hash=api_hash, bot_token=BOT_TOKEN)
 
 def extract_highlighted_text(pdf_path):
     doc = fitz.open(pdf_path)
@@ -32,13 +27,8 @@ def extract_highlighted_text(pdf_path):
                 highlighted_text.append(highlights.strip())
     return highlighted_text
 
-def generate_highlight_cards(pdf_path, output_directory):
-    os.makedirs(output_directory, exist_ok=True)
-    
-    filename = os.path.basename(pdf_path)
-    pdf_name = os.path.splitext(filename)[0]
-    output_file = os.path.join(output_directory, f"{pdf_name}_highlights.html")
-    with open(output_file, "w", encoding="utf-8") as f_out:
+def generate_highlight_cards(pdf_path, output_path):
+    with open(output_path, "w", encoding="utf-8") as f_out:
         f_out.write("""
         <html>
         <head>
@@ -56,6 +46,7 @@ def generate_highlight_cards(pdf_path, output_directory):
         <body>
             <div class="container">
         """)
+        pdf_name = os.path.splitext(os.path.basename(pdf_path))[0]
         f_out.write(f"<h1>Highlights from {pdf_name}</h1>\n")
         # Extract highlighted text
         highlights = extract_highlighted_text(pdf_path)
@@ -76,7 +67,7 @@ def generate_highlight_cards(pdf_path, output_directory):
         </body>
         </html>
         """)
-    return output_file
+    return output_path
 
 # Handler for the /start command
 @bot.on_message(filters.command("start"))
@@ -91,15 +82,19 @@ def handle_pdf(client, message):
         file_name = message.document.file_name
 
         message.reply_text("Downloading your PDF file...")
-        pdf_path = os.path.join(pdf_directory, file_name)
-        bot.download_media(file_id, file_name=pdf_path)
+        
+        with TemporaryDirectory() as temp_dir:
+            pdf_path = os.path.join(temp_dir, file_name)
+            bot.download_media(file_id, file_name=pdf_path)
 
-        message.reply_text("Extracting highlights from your PDF...")
-        output_file = generate_highlight_cards(pdf_path, output_directory)
+            message.reply_text("Extracting highlights from your PDF...")
+            output_file = os.path.join(temp_dir, f"{os.path.splitext(file_name)[0]}_highlights.html")
+            generate_highlight_cards(pdf_path, output_file)
 
-        with open(output_file, "rb") as file:
-            bot.send_document(message.chat.id, file)
-        message.reply_text(f"Highlight extraction completed. Check the output directory for the result.")
+            with open(output_file, "rb") as file:
+                bot.send_document(message.chat.id, file)
+        
+        message.reply_text("Highlight extraction completed.")
     else:
         message.reply_text("Please send a PDF file.")
 
