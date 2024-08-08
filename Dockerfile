@@ -19,7 +19,7 @@ COPY . .
 ENV PORT=5000
 
 # Ensure the start script has execute permissions
-RUN chmod +x /usr/src/app/start.sh
+RUN chmod +x start.sh
 
 # Expose the port the app runs on
 EXPOSE $PORT
