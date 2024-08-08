@@ -4,7 +4,7 @@
 FROM python:3.10-slim
 
 # Set the working directory in the container
-WORKDIR .
+WORKDIR ./
 
 # Copy the requirements.txt file into the container
 COPY requirements.txt ./
