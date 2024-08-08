@@ -1,15 +1,24 @@
+
 import os
 import fitz  # PyMuPDF
-import telebot
+from pyrogram import Client, filters
 from dotenv import load_dotenv
+
 
 load_dotenv() 
 
-BOT_TOKEN=os.getenv("BOT_TOKEN")
-bot = telebot.TeleBot(BOT_TOKEN)
 
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+api_id = os.getenv("API_ID")
+api_hash = os.getenv("API_HASH")
+
+bot = Client("pdf_highlighter_bot", api_id=api_id, api_hash=api_hash, bot_token=BOT_TOKEN)
+
+# Directories for PDF files and output files
 pdf_directory = "/home/risriddle/Downloads/Books"
 output_directory = "/home/risriddle/Downloads/Jists"
+
 def extract_highlighted_text(pdf_path):
     doc = fitz.open(pdf_path)
     highlighted_text = []
@@ -21,8 +30,8 @@ def extract_highlighted_text(pdf_path):
                 rect = annot.rect  # Annotation rectangle
                 highlights = page.get_text("text", clip=rect)  # Get text within the annotation's rectangle
                 highlighted_text.append(highlights.strip())
-    
     return highlighted_text
+
 def generate_highlight_cards(pdf_path, output_directory):
     os.makedirs(output_directory, exist_ok=True)
     
@@ -42,7 +51,7 @@ def generate_highlight_cards(pdf_path, output_directory):
                 .share-buttons { display: flex; justify-content: flex-end; margin-top: 10px; }
                 .share-button { text-decoration: none; padding: 10px 15px; margin-left: 10px; border-radius: 5px; font-size: 14px; }
                 .share-whatsapp { background-color: #25D366; color: white; }
-                 </style>
+            </style>
         </head>
         <body>
             <div class="container">
@@ -59,7 +68,6 @@ def generate_highlight_cards(pdf_path, output_directory):
                 <p>{highlight}</p>
                 <div class="share-buttons">
                     <a href="https://api.whatsapp.com/send?text={encoded_highlight}" target="_blank" class="share-button share-whatsapp">Share on WhatsApp</a>
-                    
                 </div>
             </div>
             """)
@@ -69,22 +77,34 @@ def generate_highlight_cards(pdf_path, output_directory):
         </html>
         """)
     return output_file
-@bot.message_handler(commands=['start'])
-def start(message):
-    command = message.text.split()
-    if len(command) != 2:
-        bot.reply_to(message, "Please provide the PDF filename. Usage: /start <filename>")
-        return
-    pdf_filename = command[1]
-    pdf_path = os.path.join(pdf_directory, pdf_filename)
-    if not os.path.exists(pdf_path):
-        bot.reply_to(message, f"File {pdf_filename} not found in the PDF directory.")
-        return
-    output_file = generate_highlight_cards(pdf_path, output_directory)
-    with open(output_file, "rb") as file:
-        bot.send_document(message.chat.id, file)
-    bot.reply_to(message, f"Highlight extraction completed for {pdf_filename}. Check the output directory for the result.")
+
+# Handler for the /start command
+@bot.on_message(filters.command("start"))
+def start(client, message):
+    message.reply_text("Send me a PDF file, and I'll extract the highlighted text for you.")
+
+# Handler for PDF file messages
+@bot.on_message(filters.document)
+def handle_pdf(client, message):
+    if message.document.mime_type == "application/pdf":
+        file_id = message.document.file_id
+        file_name = message.document.file_name
+
+        message.reply_text("Downloading your PDF file...")
+        pdf_path = os.path.join(pdf_directory, file_name)
+        bot.download_media(file_id, file_name=pdf_path)
+
+        message.reply_text("Extracting highlights from your PDF...")
+        output_file = generate_highlight_cards(pdf_path, output_directory)
+
+        with open(output_file, "rb") as file:
+            bot.send_document(message.chat.id, file)
+        message.reply_text(f"Highlight extraction completed. Check the output directory for the result.")
+    else:
+        message.reply_text("Please send a PDF file.")
+
 def main():
-    bot.polling()
+    bot.run()
+
 if __name__ == '__main__':
     main()
