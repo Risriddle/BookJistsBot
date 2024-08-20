@@ -3,3 +3,4 @@ flask
 pymupdf
 python-dotenv
 TgCrypto
+gunicorn
